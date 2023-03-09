@@ -1,34 +1,64 @@
 const User = require('../models/user')
 const bcrypt = require('bcryptjs')
-const getUsers = (req, res) => {
+
+const getUser = (req, res) => {
   res.json('getUsers')
 }
+
+const getUsers = async (req, res) => {
+  const { limit = 5, from = 0 } = req.query
+  const activeUsers = { status: true }
+  const usersPromise = User.find(activeUsers)
+    .skip(Number(from))
+    .limit(Number(limit))
+
+  const totalPromise = User.countDocuments(activeUsers)
+
+  const [{ value: users }, { value: total }] = await Promise.allSettled([usersPromise, totalPromise])
+
+  res.json({
+    total,
+    users
+  })
+}
+
 const createtUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body
-    console.log(req.body)
     const user = new User({ name, email, password, role })
-
-    // check if the user exists
 
     // encrypt the password
     const salt = bcrypt.genSaltSync()
     user.password = bcrypt.hashSync(password, salt)
+
     // save in DB
     await user.save()
 
-    const { password: pwd, ...userWithoutPassword } = user
     res.json({
-      userWithoutPassword
+      msg: 'User created succesfully',
+      user: user.toJSON()
     })
   } catch (error) {
     console.log(error)
   }
 }
-const updateUser = (req, res) => {
-  res.json('updateUser')
+
+const updateUser = async (req, res) => {
+  const { id } = req.params
+  const { password, google, ...restBody } = req.body
+
+  if (password) {
+    const salt = bcrypt.genSaltSync()
+    restBody.password = bcrypt.hashSync(password, salt)
+  }
+
+  const user = await User.findByIdAndUpdate(id, restBody)
+  res.json({
+    msg: `User ${id} succesfully updated`,
+    user
+  })
 }
-const deleteUser = (req, res) => {
+const deleteUser = async (req, res) => {
   res.json('deleteUser')
 }
 
@@ -36,5 +66,6 @@ module.exports = {
   getUsers,
   createtUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  getUser
 }
