@@ -58,8 +58,16 @@ const updateUser = async (req, res) => {
     user
   })
 }
+
 const deleteUser = async (req, res) => {
-  res.json('deleteUser')
+  const { id } = req.params
+  // Physically deleted
+  // const user = await User.findByIdAndDelete(id)
+
+  // Logically deleted
+  const user = await User.findByIdAndUpdate(id, { status: false })
+
+  res.json({ msg: `User ${id} succesfully deleted`, user })
 }
 
 module.exports = {
